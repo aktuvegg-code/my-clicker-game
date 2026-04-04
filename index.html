@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>F-Coin Clicker 3.0</title>
+    <style>
+        :root {
+            /* Базовые цвета Notcoin стиля */
+            --bg-top: #000000;
+            --bg-bottom: #1a1a1a;
+            --text-color: #ffffff;
+            --accent-color: #ffd700; /* Золотой */
+            
+            /* Цвета свечения рангов (сделал ярче и больше) */
+            --glow-bronze: 0 0 60px 15px rgba(205, 127, 50, 0.6);
+            --glow-silver: 0 0 70px 20px rgba(192, 192, 192, 0.7);
+            --glow-gold: 0 0 80px 25px rgba(255, 215, 0, 0.8);
+            --glow-diamond: 0 0 90px 30px rgba(0, 191, 255, 0.9);
+
+            /* Эффекты стекла (Glassmorphism) */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(15px);
+            
+            /* Цвета вкладок (для сочетания с магазином) */
+            --tab-active-bg: rgba(255, 215, 0, 0.1);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at center, #2c2c2e 0%, #000000 100%);
+            color: var(--text-color);
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+            user-select: none; -webkit-touch-callout: none;
+        }
+
+        /* --- ГЛАВНЫЙ ЭКРАН (EARN) --- */
+        .top-header { text-align: center; padding-top: 40px; padding-bottom: 20px; transition: opacity 0.3s; }
+        .balance-container { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 8px; }
+        
+        /* Смайлик перед балансом */
+        .balance-coin-icon { font-size: 40px; }
+        .balance-text { font-size: 52px; font-weight: 800; letter-spacing: -1.5px; }
+
+        .rank-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; color: rgba(255,255,255,0.7); cursor: pointer; padding: 5px 10px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+
+        .click-area { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+        
+        /* --- КРАСИВАЯ МОНЕТА (Notcoin Style 3.0) --- */
+        .notcoin-loaded {
+            position: relative;
+            width: 270px; height: 270px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.05s ease, box-shadow 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            
+            /* Эффект металла и объема */
+            background: radial-gradient(circle at 30% 30%, #555 0%, #000 100%);
+            border: 10px solid #333;
+            box-shadow: var(--glow-bronze); /* Дефолтное свечение */
+        }
+        
+        /* Блик на монете */
+        .notcoin-loaded::after {
+            content: ''; position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%);
+            pointer-events: none;
+        }
+
+        /* Цвета монет (скины) */
+        .notcoin-loaded.skin-bronze { background: radial-gradient(circle at 30% 30%, #d08851 0%, #8c5a2b 100%); border-color: #b1703e; }
+        .notcoin-loaded.skin-gold { background: radial-gradient(circle at 30% 30%, #ffe033 0%, #cca100 100%); border-color: #f2c94c; }
+        .notcoin-loaded.skin-diamond { background: radial-gradient(circle at 30% 30%, #b9f2ff 0%, #0095ff 100%); border-color: #6cd5ff; }
+
+        .notcoin-loaded:active { transform: scale(0.95); }
+
+        /* Значок внутри монеты (Буква F в пятиугольнике) */
+        .coin-icon-svg {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px; height: 140px;
+            fill: rgba(0,0,0,0.6); /* Темный значок для объема */
+            pointer-events: none;
+        }
+
+        /* Анимация +1 */
+        .plus-one {
+            position: absolute;
+            color: #fff; font-size: 32px; font-weight: 800;
+            animation: floatUp 0.8s ease-out forwards;
+            pointer-events: none; z-index: 10;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-130px); }
+        }
+
+        /* --- НИЖНЯЯ ПАНЕЛЬ (ENERGY) --- */
+        .energy-section {
+            padding: 0 20px; padding-bottom: 20px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        /* Прячем энергию на других вкладках */
+        .energy-section.hidden { transform: translateY(100px); opacity: 0; pointer-events: none; }
+
+        .energy-bar-container { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600; }
+        .energy-track { flex: 1; height: 14px; background-color: rgba(255,255,255,0.08); border-radius: 7px; overflow: hidden; }
+        .energy-fill { height: 100%; background: linear-gradient(90deg, #ffcc00, #ff9500); width: 100%; transition: width 0.2s linear; }
+
+        /* --- МЕНЮ НАВИГАЦИИ --- */
+        .nav-menu {
+            display: flex; gap: 8px;
+            background-color: var(--glass-bg);
+            border-top: 1px solid var(--glass-border);
+            backdrop-filter: var(--glass-blur);
+            padding: 10px; padding-bottom: 25px;
+        }
+
+        .nav-item {
+            flex: 1; background: none; border: none;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            color: rgba(255,255,255,0.5);
+            padding: 12px 0; cursor: pointer; border-radius: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .nav-item.active { background-color: rgba(255,255,255,0.05); color: #fff; }
+        
+        /* Стилизация под магазин */
+        #nav-boosts.active { background-color: rgba(255, 215, 0, 0.08); color: var(--accent-color); }
+        #nav-skins.active { background-color: rgba(0, 191, 255, 0.08); color: #00bfff; }
+
+        .nav-icon { font-size: 24px; }
+        .nav-label { font-size: 13px; font-weight: 600; }
+
+        /* --- ЭКРАНЫ ВТОРЫХ ВКЛАДОК --- */
+        .screen { display: none; flex: 1; overflow-y: auto; padding: 20px; background-color: #000; padding-bottom: 100px; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        h2 { margin-top: 10px; font-size: 32px; font-weight: 800; margin-bottom: 5px; }
+        h3 { color: rgba(255,255,255,0.5); font-size: 16px; font-weight: 400; margin-top: 0; margin-bottom: 30px; }
+
+        /* --- СТИЛЬ СПИСКОВ (image_2.png) --- */
+        .group-title { color: #fff; font-size: 19px; font-weight: 700; margin: 25px 0 12px 0; }
+        .item-card { background-color: #1c1c1e; border-radius: 18px; padding: 18px; display: flex; align-items: center; gap: 16px; margin-bottom: 12px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
+        .item-card:active { background-color: #2c2c2e; }
+        .item-card.selected { border-color: var(--accent-color); background-color: rgba(255,215,0,0.05); }
+
+        .item-icon-box { width: 55px; height: 55px; background-color: #2c2c2e; border-radius: 14px; display: flex; justify-content: center; align-items: center; font-size: 26px; }
+        .item-info { flex: 1; }
+        .item-title { font-size: 18px; font-weight: 600; margin-bottom: 3px; }
+        .item-subtitle { font-size: 14px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 6px; }
+        
+        .coin-mini { font-size: 14px; }
+        .item-action { color: rgba(255,255,255,0.3); font-size: 22px; }
+        .item-card.disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* --- НОВЫЙ БЛОК ПРОГРЕССА РАНГА --- */
+        .rank-progress-card {
+            background-color: #1c1c1e; border-radius: 18px; padding: 20px;
+            margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .progress-text-main { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+        .progress-text-sub { font-size: 14px; color: rgba(255,255,255,0.6); }
+        .progress-goal { color: var(--accent-color); font-weight: 600; }
+
+        /* --- ПОП-АП ПОКУПКИ (ШТОРКА) --- */
+        .popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7); z-index: 100;
+            display: none; justify-content: flex-end; flex-direction: column;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .popup-overlay.active { display: flex; opacity: 1; }
+
+        .popup-content {
+            background-color: #1c1c1e;
+            border-top-left-radius: 25px; border-top-right-radius: 25px;
+            padding: 30px; padding-bottom: 40px;
+            transform: translateY(100%); transition: transform 0.3s ease-out;
+            text-align: center;
+        }
+        .popup-overlay.active .popup-content { transform: translateY(0); }
+
+        .popup-icon { font-size: 60px; margin-bottom: 20px; display: block; }
+        .popup-title { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+        .popup-desc { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 30px; line-height: 1.4; }
+        
+        .popup-price-row { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+        
+        .popup-buy-btn {
+            width: 100%; background-color: var(--accent-color); color: #000;
+            border: none; padding: 18px; border-radius: 16px;
+            font-size: 18px; font-weight: 700; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .popup-buy-btn:active { background-color: #f2c94c; }
+        .popup-buy-btn:disabled { background-color: #48484a; color: rgba(255,255,255,0.5); cursor: not-allowed; }
+        
+        .close-popup { position: absolute; top: 20px; right: 20px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; }
+
+        /* Анимация пульсации для Турбо */
+        @keyframes turboPulse {
+            0% { transform: scale(1); box-shadow: 0 0 60px 10px rgba(255, 215, 0, 0.5); }
+            100% { transform: scale(1.03); box-shadow: 0 0 90px 25px rgba(255, 215, 0, 0.9); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-earn" class="screen active" style="background:none; overflow:hidden; padding:0;">
+        <div class="top-header" id="earn-header">
+            <div class="balance-container">
+                <div class="balance-coin-icon">🪙</div>
+                <div class="balance-text" id="coin-count">0</div>
+            </div>
+            <div class="rank-badge" onclick="switchTab('skins')">
+                🏆 <span id="rank-name">Бронза</span> ›
+            </div>
+        </div>
+
+        <div class="click-area">
+            <div class="notcoin-loaded skin-bronze" id="coin-btn">
+                <svg class="coin-icon-svg" viewBox="0 0 100 100">
+                    <path d="M50 5 L95 38 L78 92 L22 92 L5 38 Z" stroke-width="2" />
+                    <text x="50" y="65" font-family="Arial, Helvetica" font-size="50" font-weight="bold" text-anchor="middle" fill="inherit">F</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-boosts" class="screen">
+        <h2>Boosters</h2>
+        <div class="balance-container" style="justify-content: flex-start; margin-bottom: 30px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px;">
+            <div class="balance-coin-icon" style="font-size: 28px;">🪙</div>
+            <div class="balance-text" id="boost-balance" style="font-size: 32px;">0</div>
+        </div>
+
+        <div class="group-title">Free daily boosters</div>
+        <div class="item-card" onclick="openConfirmPopup('turbo')">
+            <div class="item-icon-box">🚀</div>
+            <div class="item-info">
+                <div class="item-title">Turbo</div>
+                <div class="item-subtitle">Авто-доход +600 монет за 1 мин</div>
+            </div>
+            <div class="item-action">›</div>
+        </div>
+        <div class="item-card" onclick="openConfirmPopup('energy')">
+            <div class="item-icon-box">⚡</div>
+            <div class="item-info">
+                <div class="item-title">Full Energy</div>
+                <div class="item-subtitle">Восстановить сейчас</div>
+            </div>
+            <div class="item-action">›</div>
+        </div>
+
+        <div class="group-title">Boosters</div>
+        <div class="item-card" onclick="openConfirmPopup('multitap')">
+            <div class="item-icon-box">👆</div>
+            <div class="item-info">
+                <div class="item-title">Multitap</div>
+                <div class="item-subtitle">
+                    <span class="coin-mini">🪙</span>
+                    <span id="mc-price-display">1,000</span> • <span id="mc-lvl-display">1 lvl</span>
+                </div>
+            </div>
+            <div class="item-action">›</div>
+        </div>
+        <div class="item-card" onclick="openConfirmPopup('limit')">
+            <div class="item-icon-box">🔋</div>
+            <div class="item-info">
+                <div class="item-title">Energy Limit</div>
+                <div class="item-subtitle">
+                    <span class="coin-mini">🪙</span>
+                    <span id="el-price-display">1,000</span> • <span id="el-lvl-display">1 lvl</span>
+                </div>
+            </div>
+            <div class="item-action">›</div>
+        </div>
+    </div>
+
+    <div id="screen-skins" class="screen">
+        <h2>Skins & Rank</h2>
+        
+        <div class="rank-progress-card">
+            <div class="progress-text-main">Твой ранг: <span id="rank-status-name">Бронза</span></div>
+            <div class="progress-text-sub" id="rank-progress-text">До следующего ранга нужно собрать монеты.</div>
+        </div>
+
+        <div class="group-title">Доступные скины</div>
+        
+        <div class="item-card skin-option selected" id="skin-bronze-opt">
+            <div class="item-icon-box" style="background:linear-gradient(#d08851, #8c5a2b); border-radius:50%; border:3px solid #b1703e;"></div>
+            <div class="item-info">
+                <div class="item-title">Бронзовая монета</div>
+                <div class="item-subtitle">0+ монет</div>
+            </div>
+            <div class="item-action">✓</div>
+        </div>
+
+        <div class="item-card skin-option disabled" id="skin-gold-opt">
+            <div class="item-icon-box" style="background:linear-gradient(#ffe033, #cca100); border-radius:50%; border:3px solid #f2c94c;"></div>
+            <div class="item-info">
+                <div class="item-title">Золотая монета</div>
+                <div class="item-subtitle">100,000+ монет</div>
+            </div>
+            <div class="item-action">🔒</div>
+        </div>
+
+        <div class="item-card skin-option disabled" id="skin-diamond-opt">
+            <div class="item-icon-box" style="background:linear-gradient(#b9f2ff, #0095ff); border-radius:50%; border:3px solid #6cd5ff;"></div>
+            <div class="item-info">
+                <div class="item-title">Алмазная монета</div>
+                <div class="item-subtitle">1,000,000+ монет</div>
+            </div>
+            <div class="item-action">🔒</div>
+        </div>
+    </div>
+
+    <div id="screen-frens" class="screen">
+        <h2>Frens</h2>
+        <h3>Приглашай друзей и получай бонусы</h3>
+        <p style="text-align:center; color:rgba(255,255,255,0.2); margin-top:60px; font-size:18px;">Реферальная система скоро...</p>
+    </div>
+
+    <div class="fixed-footer">
+        <div class="energy-section" id="energy-bar">
+            <div class="energy-bar-container">
+                <span id="energy-icon">⚡</span>
+                <div class="energy-track">
+                    <div class="energy-fill" id="energy-fill"></div>
+                </div>
+                <span id="energy-counter">1000/1000</span>
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <button class="nav-item" onclick="switchTab('frens')">
+                <div class="nav-icon">🧸</div>
+                <div class="nav-label">Frens</div>
+            </button>
+            <button class="nav-item active" id="nav-earn" onclick="switchTab('earn')">
+                <div class="nav-icon">🪙</div>
+                <div class="nav-label">Earn</div>
+            </button>
+            <button class="nav-item" id="nav-boosts" onclick="switchTab('boosts')">
+                <div class="nav-icon">🚀</div>
+                <div class="nav-label">Boosts</div>
+            </button>
+            <button class="nav-item" id="nav-skins" onclick="switchTab('skins')">
+                <div class="nav-icon">🏆</div>
+                <div class="nav-label">Rank</div>
+            </button>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="popup-overlay">
+        <div class="popup-content">
+            <button class="close-popup" onclick="closePopup()">✕</button>
+            <span class="popup-icon" id="pop-icon">🚀</span>
+            <div class="popup-title" id="pop-title">Turbo</div>
+            <div class="popup-desc" id="pop-desc">Краткое описание буста.</div>
+            
+            <div class="popup-price-row" id="pop-price-row">
+                <span class="coin-mini">🪙</span>
+                <span id="pop-price">1,000</span>
+            </div>
+            
+            <button class="popup-buy-btn" id="pop-buy-btn" onclick="confirmPurchase()">Купить</button>
+        </div>
+    </div>
+
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // База данных игры (v4)
+        let coins = parseFloat(localStorage.getItem('coins_v4')) || 0;
+        let clickPower = parseInt(localStorage.getItem('clickPower_v4')) || 1;
+        let maxEnergy = parseInt(localStorage.getItem('maxEnergy_v4')) || 1000;
+        let currentEnergy = parseInt(localStorage.getItem('currentEnergy_v4')) || maxEnergy;
+        
+        let mcLvl = parseInt(localStorage.getItem('mcLvl_v4')) || 1;
+        let eLvl = parseInt(localStorage.getItem('eLvl_v4')) || 1;
+        
+        // Лимиты рангов
+        const Ranks = { BRONZE: 0, SILVER: 10000, GOLD: 100000, DIAMOND: 1000000 };
+        let currentRankName = "Бронза";
+
+        // Переменные бустов
+        let isTurboActive = false;
+        let currentActivePopup = null; // Какой буст сейчас открыт в поп-апе
+
+        // DOM элементы
+        const coinCountEl = document.getElementById('coin-count');
+        const boostBalanceEl = document.getElementById('boost-balance');
+        const rankNameEl = document.getElementById('rank-name');
+        const coinBtn = document.getElementById('coin-btn');
+        const energyFillEl = document.getElementById('energy-fill');
+        const energyCounterEl = document.getElementById('energy-counter');
+        const energyBarEl = document.getElementById('energy-bar');
+
+        // Элементы магазина
+        const mcPriceDisp = document.getElementById('mc-price-display');
+        const mcLvlDisp = document.getElementById('mc-lvl-display');
+        const elPriceDisp = document.getElementById('el-price-display');
+        const elLvlDisp = document.getElementById('el-lvl-display');
+
+        // Элементы ранга
+        const rankStatusNameEl = document.getElementById('rank-status-name');
+        const rankProgressTextEl = document.getElementById('rank-progress-text');
+
+        // Элементы поп-апа
+        const overlay = document.getElementById('popup-overlay');
+        const popIcon = document.getElementById('pop-icon');
+        const popTitle = document.getElementById('pop-title');
+        const popDesc = document.getElementById('pop-desc');
+        const popPrice = document.getElementById('pop-price');
+        const popBuyBtn = document.getElementById('pop-buy-btn');
+        const popPriceRow = document.getElementById('pop-price-row');
+
+        // Цены
+        let mcPrice = 1000 * Math.pow(2, mcLvl - 1);
+        let elPrice = 1000 * Math.pow(2, eLvl - 1);
+
+        // Функция сохранения
+        function save() {
+            localStorage.setItem('coins_v4', coins);
+            localStorage.setItem('clickPower_v4', clickPower);
+            localStorage.setItem('maxEnergy_v4', maxEnergy);
+            localStorage.setItem('currentEnergy_v4', currentEnergy);
+            localStorage.setItem('mcLvl_v4', mcLvl);
+            localStorage.setItem('eLvl_v4', eLvl);
+        }
+
+        // Функция форматирования чисел (с запятыми)
+        function formatNum(num) {
+            return Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Обновление интерфейса
+        function updateUI() {
+            let fCoins = formatNum(coins);
+            coinCountEl.innerText = fCoins;
+            boostBalanceEl.innerText = fCoins;
+            energyCounterEl.innerText = `${currentEnergy}/${maxEnergy}`;
+            
+            // Полоска энергии
+            let energyPercent = (currentEnergy / maxEnergy) * 100;
+            energyFillEl.style.width = `${energyPercent}%`;
+
+            // Магазин
+            mcPriceDisp.innerText = formatNum(mcPrice);
+            mcLvlDisp.innerText = `${mcLvl} lvl`;
+            elPriceDisp.innerText = formatNum(elPrice);
+            elLvlDisp.innerText = `${eLvl} lvl`;
+
+            // ЛОГИКА РАНГОВ И СВЕЧЕНИЯ
+            if (coins >= Ranks.DIAMOND) {
+                currentRankName = "Алмазный";
+                rankNameEl.style.color = "#00bfff";
+                coinBtn.style.boxShadow = "var(--glow-diamond)";
+                
+                document.getElementById('skin-diamond-opt').classList.remove('disabled');
+                document.getElementById('skin-diamond-opt').querySelector('.item-action').innerText = '›';
+                
+                rankProgressTextEl.innerText = "У тебя максимальный ранг! Легенда!";
+            } else if (coins >= Ranks.GOLD) {
+                currentRankName = "Золотой";
+                rankNameEl.style.color = "var(--accent-color)";
+                coinBtn.style.boxShadow = "var(--glow-gold)";
+                
+                document.getElementById('skin-gold-opt').classList.remove('disabled');
+                document.getElementById('skin-gold-opt').querySelector('.item-action').innerText = '›';
+                
+                let toNext = Ranks.DIAMOND - coins;
+                rankProgressTextEl.innerHTML = `До Алмазного осталось собрать <span class="progress-goal">🪙 ${formatNum(toNext)}</span> монет.`;
+            } else if (coins >= Ranks.SILVER) {
+                currentRankName = "Серебряный";
+                rankNameEl.style.color = "#c0c0c0";
+                coinBtn.style.boxShadow = "var(--glow-silver)";
+                
+                let toNext = Ranks.GOLD - coins;
+                rankProgressTextEl.innerHTML = `До Золотого осталось собрать <span class="progress-goal">🪙 ${formatNum(toNext)}</span> монет.`;
+            } else {
+                currentRankName = "Бронза";
+                rankNameEl.style.color = "#cd7f32";
+                coinBtn.style.boxShadow = "var(--glow-bronze)";
+                
+                let toNext = Ranks.SILVER - coins;
+                rankProgressTextEl.innerHTML = `До Серебряного осталось собрать <span class="progress-goal">🪙 ${formatNum(toNext)}</span> монет.`;
+            }
+            rankNameEl.innerText = currentRankName;
+            rankStatusNameEl.innerText = currentRankName;
+        }
+
+        // Клик по монете
+        coinBtn.addEventListener('click', (e) => {
+            if (isTurboActive) return; // Во время авто-турбо клики не работают (или работают без энергии, по желанию)
+
+            if (currentEnergy >= clickPower) {
+                currentEnergy -= clickPower;
+                coins += clickPower;
+                
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                
+                createPlusOne(clickPower, e);
+                updateUI();
+                save();
+            } else {
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+            }
+        });
+
+        // Анимация +1
+        function createPlusOne(power, event) {
+            const plusOne = document.createElement('div');
+            plusOne.className = 'plus-one';
+            plusOne.innerText = `+${power}`;
+            plusOne.style.left = `${event.clientX - 15}px`;
+            plusOne.style.top = `${event.clientY - 20}px`;
+            document.body.appendChild(plusOne);
+            setTimeout(() => plusOne.remove(), 800);
+        }
+
+        // Авто-Турбо анимация прибавления (не от клика)
+        function createAutoPlus(power) {
+            const plus = document.createElement('div');
+            plus.className = 'plus-one';
+            plus.innerText = `+${power}`;
+            plus.style.color = "var(--accent-color)"; // Золотой цвет
+            plus.style.fontSize = "36px";
+            // По центру монеты
+            plus.style.left = `calc(50% - 20px)`;
+            plus.style.top = `calc(50% - 20px)`;
+            document.getElementById('screen-earn').appendChild(plus);
+            setTimeout(() => plus.remove(), 800);
+        }
+
+        // Восстановление энергии (+1 в 1 сек)
+        setInterval(() => {
+            if (currentEnergy < maxEnergy && !isTurboActive) {
+                currentEnergy = Math.min(maxEnergy, currentEnergy + 1);
+                updateUI();
+            }
+        }, 1000);
+
+        // --- ЛОГИКА ПОП-АПА (ШТОРКИ) ---
+        
+        const boostData = {
+            'turbo': { icon: '🚀', title: 'Turbo Auto-Bot', desc: 'Активирует автоматический сбор монет на 1 минуту. Ты получишь в сумме +600 монет без траты энергии и кликов!', price: 0, free: true },
+            'energy': { icon: '⚡', title: 'Full Energy', desc: 'Мгновенно восстанавливает твой запас энергии до максимума. Полезно, когда хочется много тапать!', price: 0, free: true },
+            'multitap': { icon: '👆', title: 'Multitap', desc: 'Увеличивает силу твоего клика. Каждый уровень добавляет +1 монету за один тап.', getPrice: () => mcPrice, free: false },
+            'limit': { icon: '🔋', title: 'Energy Limit', desc: 'Увеличивает максимальную емкость твоего бака энергии. Каждый уровень добавляет +500 к лимиту.', getPrice: () => elPrice, free: false }
+        };
+
+        function openConfirmPopup(boostId) {
+            currentActivePopup = boostId;
+            let data = boostData[boostId];
+            
+            popIcon.innerText = data.icon;
+            popTitle.innerText = data.title;
+            popDesc.innerText = data.desc;
+            
+            if (data.free) {
+                popPriceRow.style.display = 'none';
+                popBuyBtn.innerText = 'Активировать бесплатно';
+                popBuyBtn.disabled = false;
+                popBuyBtn.style.backgroundColor = 'var(--accent-color)';
+            } else {
+                popPriceRow.style.display = 'flex';
+                let price = data.getPrice();
+                popPrice.innerText = formatNum(price);
+                
+                if (coins >= price) {
+                    popBuyBtn.innerText = 'Купить';
+                    popBuyBtn.disabled = false;
+                    popBuyBtn.style.backgroundColor = 'var(--accent-color)';
+                } else {
+                    popBuyBtn.innerText = 'Не хватает монет';
+                    popBuyBtn.disabled = true;
+                    popBuyBtn.style.backgroundColor = '#48484a';
+                }
+            }
+            
+            overlay.classList.add('active');
+        }
+
+        function closePopup() {
+            overlay.classList.remove('active');
+            currentActivePopup = null;
+        }
+
+        // Подтверждение покупки в поп-апе
+        function confirmPurchase() {
+            if (!currentActivePopup) return;
+            let boostId = currentActivePopup;
+            let data = boostData[boostId];
+            
+            if (data.free) {
+                // Бесплатные бусты
+                if (boostId === 'energy') {
+                    currentEnergy = maxEnergy;
+                    tg.showAlert("Энергия восстановлена! ⚡");
+                } else if (boostId === 'turbo') {
+                    startTurboMode();
+                }
+                closePopup();
+                switchTab('earn');
+            } else {
+                // Платные бусты
+                let price = data.getPrice();
+                if (coins >= price) {
+                    coins -= price;
+                    
+                    if (boostId === 'multitap') {
+                        mcLvl++; clickPower++; mcPrice *= 2;
+                    } else if (boostId === 'limit') {
+                        eLvl++; maxEnergy += 500; currentEnergy += 500; elPrice *= 2;
+                    }
+                    
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    closePopup();
+                } else {
+                    tg.showAlert("Не хватает монет! 🪙");
+                }
+            }
+            updateUI();
+            save();
+        }
+
+        // НОВАЯ ЛОГИКА ТУРБО (Автоматический на 1 мин, +600 монет)
+        function startTurboMode() {
+            if (isTurboActive) return;
+            isTurboActive = true;
+            
+            switchTab('earn');
+            // Прячем энергию на время турбо
+            energyBarEl.classList.add('hidden');
+            
+            // Визуальный эффект
+            coinBtn.style.animation = "turboPulse 0.3s infinite alternate";
+            coinBtn.style.borderColor = "var(--accent-color)";
+            
+            tg.showScanQrPopup({ text: "🚀 TURBO MODE ACTIVATE! +600 монет за 1 минуту!" });
+            setTimeout(() => tg.closeScanQrPopup(), 2500);
+
+            // Логика начисления: +10 монет каждую секунду (в сумме 600)
+            let secondsLeft = 60;
+            let turboInterval = setInterval(() => {
+                secondsLeft--;
+                coins += 10; // +10 монет в сек
+                
+                createAutoPlus(10);
+                updateUI();
+                
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+                if (secondsLeft <= 0) {
+                    clearInterval(turboInterval);
+                    endTurboMode();
+                }
+            }, 1000);
+        }
+
+        function endTurboMode() {
+            isTurboActive = false;
+            coinBtn.style.animation = "none";
+            coinBtn.style.borderColor = "#333";
+            energyBarEl.classList.remove('hidden'); // Возвращаем энергию
+            tg.showAlert("Турбо режим завершен! Собрано +600 монет. 🚀");
+            updateUI();
+            save();
+        }
+
+
+        // УПРАВЛЕНИЕ СКИНАМИ
+        
+        function selectSkin(skinName) {
+            // Убираем выбор со всех
+            document.querySelectorAll('.skin-option').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('.skin-option .item-action').forEach(el => {
+                if (el.innerText === '✓') el.innerText = '›';
+            });
+
+            // Очищаем классы монеты (оставляем базовый)
+            coinBtn.className = 'notcoin-loaded';
+
+            // Применяем новый
+            if (skinName === 'bronze') {
+                document.getElementById('skin-bronze-opt').classList.add('selected');
+                document.getElementById('skin-bronze-opt').querySelector('.item-action').innerText = '✓';
+                coinBtn.classList.add('skin-bronze');
+            } else if (skinName === 'gold') {
+                if (coins < Ranks.GOLD) return; 
+                document.getElementById('skin-gold-opt').classList.add('selected');
+                document.getElementById('skin-gold-opt').querySelector('.item-action').innerText = '✓';
+                coinBtn.classList.add('skin-gold');
+            } else if (skinName === 'diamond') {
+                if (coins < Ranks.DIAMOND) return;
+                document.getElementById('skin-diamond-opt').classList.add('selected');
+                document.getElementById('skin-diamond-opt').querySelector('.item-action').innerText = '✓';
+                coinBtn.classList.add('skin-diamond');
+            }
+            updateUI();
+        }
+
+        document.getElementById('skin-bronze-opt').addEventListener('click', () => selectSkin('bronze'));
+        document.getElementById('skin-gold-opt').addEventListener('click', () => {
+            if (coins >= Ranks.GOLD) selectSkin('gold');
+            else tg.showAlert(`Нужен ранг Золотой (100k+ монет)! 🔒`);
+        });
+        document.getElementById('skin-diamond-opt').addEventListener('click', () => {
+            if (coins >= Ranks.DIAMOND) selectSkin('diamond');
+            else tg.showAlert(`Нужен ранг Алмазный (1M+ монет)! 🔒`);
+        });
+
+
+        // Навигация (Адаптивная)
+        function switchTab(tabName) {
+            // Закрываем поп-ап если открыт
+            closePopup();
+
+            // Скрываем все экраны и убираем активные классы меню
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            // Показываем нужный
+            document.getElementById(`screen-${tabName}`).classList.add('active');
+            
+            // Логика Энергии и Шапки (скрываем лишнее)
+            if (tabName === 'earn') {
+                energyBarEl.classList.remove('hidden');
+                document.getElementById('nav-earn').classList.add('active');
+            } else {
+                // Прячем энергию на других вкладках (НОВОЕ)
+                energyBarEl.classList.add('hidden');
+                
+                if (tabName === 'boosts') document.getElementById('nav-boosts').classList.add('active');
+                else if (tabName === 'skins') document.getElementById('nav-skins').classList.add('active');
+            }
+            
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Инициализация
+        updateUI();
+        
+        // Автоматически ставим стартовый скин
+        coinBtn.classList.add('skin-bronze');
+
+    </script>
+</body>
+</html>
